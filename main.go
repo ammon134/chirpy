@@ -26,22 +26,31 @@ func main() {
 	}
 
 	mux.Handle("/app/*", apiConfig.middlewareHitInc(http.StripPrefix("/app/", http.FileServer(http.Dir(filePathRoot)))))
-	mux.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	mux.Handle("GET /api/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(http.StatusText(http.StatusOK)))
 	}))
-	mux.HandleFunc("/metrics", apiConfig.handlerMetrics)
-	mux.HandleFunc("/reset", apiConfig.handlerReset)
+	mux.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
+	mux.HandleFunc("GET /api/reset", apiConfig.handlerReset)
 
 	fmt.Printf("listening on port %s...", port)
 	log.Fatal(server.ListenAndServe())
 }
 
 func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Hits: %d", cfg.serverHits)
+	html := `
+  <html>
+    <body>
+      <h1>Welcome, Chirpy Admin</h1>
+      <p>Chirpy has been visited %d times!</p>
+    </body>
+  </html>
+  `
+	fmt.Fprintf(w, html, cfg.serverHits)
 }
 
 func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
