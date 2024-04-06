@@ -21,14 +21,34 @@ func main() {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
-	mux.Handle("/app/", http.StripPrefix("/app/", http.FileServer(http.Dir(filePathRoot))))
+	apiConfig := &apiConfig{
+		serverHits: 0,
+	}
+
+	mux.Handle("/app/*", apiConfig.middlewareHitInc(http.StripPrefix("/app/", http.FileServer(http.Dir(filePathRoot)))))
 	mux.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(http.StatusText(http.StatusOK)))
 	}))
+	mux.HandleFunc("/metrics", apiConfig.handlerMetrics)
+	mux.HandleFunc("/reset", apiConfig.handlerReset)
+
 	fmt.Printf("listening on port %s...", port)
 	log.Fatal(server.ListenAndServe())
+}
+
+func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Hits: %d", cfg.serverHits)
+}
+
+func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	cfg.serverHits = 0
+	fmt.Fprint(w, "Hits reset to 0")
 }
 
 func middlewareCors(next http.Handler) http.Handler {
