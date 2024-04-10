@@ -35,6 +35,8 @@ func main() {
 	mux.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
 	mux.HandleFunc("GET /api/reset", apiConfig.handlerReset)
 
+	mux.HandleFunc("POST /api/validate_chirp", handlerValidate)
+
 	fmt.Printf("listening on port %s...", port)
 	log.Fatal(server.ListenAndServe())
 }
