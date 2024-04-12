@@ -1,8 +1,13 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/ammon134/chirpy/internal/database"
+)
 
 type apiConfig struct {
+	db         *database.DB
 	serverHits int
 }
 

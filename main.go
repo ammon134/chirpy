@@ -5,11 +5,14 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/ammon134/chirpy/internal/database"
 )
 
 const (
 	filePathRoot = "."
 	port         = "8080"
+	dbPath       = "database.json"
 )
 
 func main() {
@@ -21,8 +24,13 @@ func main() {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
+	db, err := database.NewDB(dbPath)
+	if err != nil {
+		log.Fatal(err)
+	}
 	apiConfig := &apiConfig{
 		serverHits: 0,
+		db:         db,
 	}
 
 	mux.Handle("/app/*", apiConfig.middlewareHitInc(http.StripPrefix("/app/", http.FileServer(http.Dir(filePathRoot)))))
@@ -35,9 +43,10 @@ func main() {
 	mux.HandleFunc("GET /admin/metrics", apiConfig.handlerMetrics)
 	mux.HandleFunc("GET /api/reset", apiConfig.handlerReset)
 
-	mux.HandleFunc("POST /api/validate_chirp", handlerValidate)
+	mux.HandleFunc("POST /api/chirps", apiConfig.handlerCreateChirp)
+	mux.HandleFunc("GET /api/chirps", apiConfig.handlerGetChirps)
 
-	fmt.Printf("listening on port %s...", port)
+	fmt.Printf("listening on port %s...\n", port)
 	log.Fatal(server.ListenAndServe())
 }
 

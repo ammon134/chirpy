@@ -8,11 +8,8 @@ import (
 	"strings"
 )
 
-func handlerValidate(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	type resBody struct {
-		CleanedBody string `json:"cleaned_body"`
-	}
 	type parameters struct {
 		Body string `json:"body"`
 	}
@@ -27,14 +24,28 @@ func handlerValidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := resBody{
-		CleanedBody: cleanChirp(params.Body),
+	chirp, err := cfg.db.CreateChirp(cleanChirp(params.Body))
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
 	}
-	respondWithJSON(w, http.StatusOK, res)
+
+	respondWithJSON(w, http.StatusCreated, chirp)
+}
+
+func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, err := cfg.db.GetChirps()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, chirps)
 }
 
 func cleanChirp(msg string) string {
 	words := strings.Fields(msg)
+	// PERF: refactor badWords from list to map
 	badWords := []string{"kerfuffle", "sharbert", "fornax"}
 	cleanedWords := []string{}
 	for _, word := range words {
