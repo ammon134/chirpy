@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/ammon134/chirpy/internal/database"
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -16,6 +18,11 @@ const (
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	mux := http.NewServeMux()
 	corsMux := middlewareCors(mux)
 	server := &http.Server{
@@ -29,8 +36,9 @@ func main() {
 		log.Fatal(err)
 	}
 	apiConfig := &apiConfig{
-		serverHits: 0,
 		db:         db,
+		jwtSecret:  os.Getenv("JWT_SECRET"),
+		serverHits: 0,
 	}
 
 	mux.Handle("/app/*", apiConfig.middlewareHitInc(http.StripPrefix("/app/", http.FileServer(http.Dir(filePathRoot)))))
@@ -48,6 +56,8 @@ func main() {
 	mux.HandleFunc("GET /api/chirps/{id}", apiConfig.handlerGetChirp)
 
 	mux.HandleFunc("POST /api/users", apiConfig.handlerCreateUser)
+
+	mux.HandleFunc("POST /api/login", apiConfig.handlerLogin)
 
 	fmt.Printf("listening on port %s...\n", port)
 	log.Fatal(server.ListenAndServe())

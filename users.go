@@ -41,3 +41,45 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 		Email: user.Email,
 	})
 }
+
+func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	type parameters struct {
+		Email            string `json:"email"`
+		Password         string `json:"password"`
+		ExpiresInSeconds int    `json:"expires_in_seconds"`
+	}
+	params := &parameters{}
+	err := decoder.Decode(params)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// compare password and user
+	user, err := cfg.db.GetUser(params.Email)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	err = bcrypt.CompareHashAndPassword(user.Hash, []byte(params.Password))
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	ss, err := createJWTToken(cfg, user, params.ExpiresInSeconds)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	type response struct {
+		Email string
+		Token string
+		ID    int
+	}
+	respondWithJSON(w, http.StatusOK, response{
+		ID:    user.ID,
+		Email: user.Email,
+		Token: ss,
+	})
+}
