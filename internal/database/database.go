@@ -14,13 +14,8 @@ type DB struct {
 }
 
 type DBStructure struct {
-	Chirps    map[int]Chirp `json:"chirps"`
-	NextIndex int           `json:"max_index"`
-}
-
-type Chirp struct {
-	Body string `json:"body"`
-	ID   int    `json:"id"`
+	ChirpTable ChirpTable
+	UserTable  UserTable
 }
 
 func NewDB(path string) (*DB, error) {
@@ -43,8 +38,14 @@ func (db *DB) ensureDB() error {
 
 func (db *DB) createDB() error {
 	dbs := DBStructure{
-		Chirps:    map[int]Chirp{},
-		NextIndex: 1,
+		ChirpTable: ChirpTable{
+			Chirps:    map[int]Chirp{},
+			NextIndex: 1,
+		},
+		UserTable: UserTable{
+			Users:     map[string]User{},
+			NextIndex: 1,
+		},
 	}
 	return db.writeDB(dbs)
 }
