@@ -47,24 +47,38 @@ func CreateJWT(jwtSecret string, userID int, duration time.Duration, tt TokenTyp
 	return ss, nil
 }
 
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ss, err := token.SignedString([]byte(jwtSecret))
+func RefreshJWT(jwtSecret, tokenStr string) (string, error) {
+	token, err := jwt.ParseWithClaims(
+		tokenStr,
+		&jwt.RegisteredClaims{},
+		func(t *jwt.Token) (interface{}, error) { return []byte(jwtSecret), nil },
+	)
 	if err != nil {
 		return "", err
 	}
-	return ss, nil
-}
-
-func ValidateJWT(jwtSecret string, r *http.Request) (*jwt.Token, error) {
-	auth := r.Header.Get("Authorization")
-	if auth == "" {
-		return nil, errors.New("no authorization token found")
+	issuer, err := token.Claims.GetIssuer()
+	if err != nil {
+		return "", err
 	}
-	bearerStr, tokenStr, found := strings.Cut(auth, " ")
-	if !found || bearerStr != "Bearer" {
-		return nil, errors.New("malformed authorization header")
+	if issuer != string(TokenTypeRefresh) {
+		return "", errors.New("invalid issuer")
+	}
+
+	userIDStr, err := token.Claims.GetSubject()
+	if err != nil {
+		return "", err
+	}
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		return "", err
+	}
+
+	newToken, err := CreateJWT(jwtSecret, userID, time.Hour, TokenTypeAccess)
+	if err != nil {
+		return "", err
+	}
+	return newToken, nil
+}
 
 func ValidateJWT(jwtSecret string, header http.Header) (*jwt.Token, error) {
 	bearerToken, err := GetBearerToken(header)

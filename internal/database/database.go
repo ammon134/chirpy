@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 )
 
 type DB struct {
@@ -14,8 +15,9 @@ type DB struct {
 }
 
 type DBStructure struct {
-	ChirpTable ChirpTable
-	UserTable  UserTable
+	RevokedTokens map[string]time.Time
+	ChirpTable    ChirpTable
+	UserTable     UserTable
 }
 
 var ErrNotExist = errors.New("does not exist")
@@ -48,6 +50,7 @@ func (db *DB) createDB() error {
 			Users:     map[int]User{},
 			NextIndex: 1,
 		},
+		RevokedTokens: map[string]time.Time{},
 	}
 	return db.writeDB(dbs)
 }
