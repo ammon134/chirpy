@@ -32,7 +32,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	chirp, err := cfg.db.CreateChirp(cleanChirp(params.Body))
+	chirp, err := cfg.db.CreateChirp(cleanChirp(params.Body), userID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return

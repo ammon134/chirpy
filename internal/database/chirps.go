@@ -8,11 +8,12 @@ type ChirpTable struct {
 }
 
 type Chirp struct {
-	Body string `json:"body"`
-	ID   int    `json:"id"`
+	Body     string `json:"body"`
+	ID       int    `json:"id"`
+	AuthorID int    `json:"author_id"`
 }
 
-func (db *DB) CreateChirp(body string) (Chirp, error) {
+func (db *DB) CreateChirp(body string, authorID int) (Chirp, error) {
 	// loadDB
 	dbs, err := db.loadDB()
 	if err != nil {
@@ -20,8 +21,9 @@ func (db *DB) CreateChirp(body string) (Chirp, error) {
 	}
 	// create Chirp, give it ID
 	chirp := Chirp{
-		ID:   dbs.ChirpTable.NextIndex,
-		Body: body,
+		ID:       dbs.ChirpTable.NextIndex,
+		Body:     body,
+		AuthorID: authorID,
 	}
 	dbs.ChirpTable.Chirps[dbs.ChirpTable.NextIndex] = chirp
 	dbs.ChirpTable.NextIndex++
