@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ammon134/chirpy/internal/auth"
 	"github.com/ammon134/chirpy/internal/database"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -62,12 +63,12 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusNotFound, err.Error())
 		return
 	}
-	err = bcrypt.CompareHashAndPassword(user.Hash, []byte(params.Password))
+	err = auth.CheckPasswordHash(user.HashedPassword, params.Password)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	ss, err := createJWTToken(cfg, user, params.ExpiresInSeconds)
+	ss, err := auth.CreateJWT(cfg.jwtSecret, user.ID, params.ExpiresInSeconds)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, err.Error())
 		return
