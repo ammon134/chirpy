@@ -17,6 +17,12 @@ const (
 	dbPath       = "database.json"
 )
 
+type apiConfig struct {
+	db         *database.DB
+	jwtSecret  string
+	serverHits int
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -56,6 +62,7 @@ func main() {
 	mux.HandleFunc("GET /api/chirps/{id}", apiConfig.handlerGetChirp)
 
 	mux.HandleFunc("POST /api/users", apiConfig.handlerCreateUser)
+	mux.HandleFunc("PUT /api/users", apiConfig.handlerUpdateUser)
 
 	mux.HandleFunc("POST /api/login", apiConfig.handlerLogin)
 

@@ -18,6 +18,8 @@ type DBStructure struct {
 	UserTable  UserTable
 }
 
+var ErrNotExist = errors.New("does not exist")
+
 func NewDB(path string) (*DB, error) {
 	// ensure db exists
 	db := &DB{
@@ -43,7 +45,7 @@ func (db *DB) createDB() error {
 			NextIndex: 1,
 		},
 		UserTable: UserTable{
-			Users:     map[string]User{},
+			Users:     map[int]User{},
 			NextIndex: 1,
 		},
 	}
