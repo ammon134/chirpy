@@ -2,11 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/ammon134/chirpy/internal/auth"
+	"github.com/ammon134/chirpy/internal/database"
 )
 
 func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request) {
@@ -20,6 +24,7 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusInternalServerError, "Could not decode request body")
 		return
 	}
+
 	userID, err := auth.ParseForUserID(cfg.jwtSecret, r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
@@ -70,6 +75,41 @@ func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondWithJSON(w, http.StatusOK, chirp)
+}
+
+func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	userID, err := auth.ParseForUserID(cfg.jwtSecret, r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+	}
+
+	chirpIDStr := r.PathValue("id")
+	chirpID, err := strconv.Atoi(chirpIDStr)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	chirp, err := cfg.db.GetChirp(chirpID)
+	if err != nil {
+		if !errors.Is(err, database.ErrNotExist) {
+			respondWithError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	if chirp.AuthorID != userID {
+		respondWithError(w, http.StatusForbidden, "user does not have permission")
+		return
+	}
+
+	err = cfg.db.DeleteChirp(chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, http.StatusText(http.StatusOK))
 }
 
 func cleanChirp(msg string) string {
