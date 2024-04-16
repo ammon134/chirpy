@@ -23,15 +23,29 @@ func CheckPasswordHash(hashedPassword []byte, password string) error {
 	return bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 }
 
-func CreateJWT(jwtSecret string, userID, expiresInSeconds int) (string, error) {
+func CreateAccessJWT(jwtSecret string, userID int) (string, error) {
 	currentTime := time.Now().UTC()
-	if expiresInSeconds == 0 || expiresInSeconds > 86400 {
-		expiresInSeconds = 86400 // 24 hours
-	}
 	claims := jwt.RegisteredClaims{
 		IssuedAt:  jwt.NewNumericDate(currentTime),
-		ExpiresAt: jwt.NewNumericDate(currentTime.Add(time.Duration(expiresInSeconds) * time.Second)),
-		Issuer:    "chirpy",
+		ExpiresAt: jwt.NewNumericDate(currentTime.Add(time.Duration(1) * time.Hour)),
+		Issuer:    "chirpy-access",
+		Subject:   strconv.Itoa(userID),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	ss, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		return "", err
+	}
+	return ss, nil
+}
+
+func CreateRefreshJWT(jwtSecret string, userID int) (string, error) {
+	currentTime := time.Now().UTC()
+	claims := jwt.RegisteredClaims{
+		IssuedAt:  jwt.NewNumericDate(currentTime),
+		ExpiresAt: jwt.NewNumericDate(currentTime.Add(time.Duration(1440) * time.Hour)),
+		Issuer:    "chirpy-refresh",
 		Subject:   strconv.Itoa(userID),
 	}
 

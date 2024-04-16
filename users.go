@@ -62,9 +62,8 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	type parameters struct {
-		Email            string `json:"email"`
-		Password         string `json:"password"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	params := &parameters{}
 	err := decoder.Decode(params)
@@ -84,15 +83,21 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "invalid password")
 		return
 	}
-	ss, err := auth.CreateJWT(cfg.jwtSecret, user.ID, params.ExpiresInSeconds)
+	accessToken, err := auth.CreateAccessJWT(cfg.jwtSecret, user.ID)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "could not create JWT")
 		return
 	}
-	//
+	refreshToken, err := auth.CreateRefreshJWT(cfg.jwtSecret, user.ID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "could not create JWT")
+		return
+	}
+
 	// type response struct
 	type response struct {
-		Token string `json:"token"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 		User
 	}
 	respondWithJSON(w, http.StatusOK, response{
@@ -100,7 +105,8 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 			ID:    user.ID,
 			Email: user.Email,
 		},
-		Token: ss,
+		Token:        accessToken,
+		RefreshToken: refreshToken,
 	})
 }
 
@@ -110,6 +116,16 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusUnauthorized, "could not validate JWT")
 		return
 	}
+	issuer, err := token.Claims.GetIssuer()
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "could not find issuer in JWT")
+		return
+	}
+	if issuer != "chirpy-access" {
+		respondWithError(w, http.StatusUnauthorized, "incorrect issuer for JWT")
+		return
+	}
+
 	userIDStr, err := token.Claims.GetSubject()
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "could not find subject in JWT")
