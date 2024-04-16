@@ -20,6 +20,13 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 		respondWithError(w, http.StatusInternalServerError, "Could not decode request body")
 		return
 	}
+	userID, err := auth.ParseForUserID(cfg.jwtSecret, r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Validate chirp length
 	if len(strings.TrimSpace(params.Body)) > 140 {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 		return
@@ -53,7 +60,7 @@ func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
 	}
 	chirp, err := cfg.db.GetChirp(idInt)
 	if err != nil {
-		if err.Error() == "chirp doesn't exist" {
+		if errors.Is(err, database.ErrNotExist) {
 			respondWithError(w, http.StatusNotFound, err.Error())
 			return
 		} else {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/ammon134/chirpy/internal/auth"
 	"github.com/ammon134/chirpy/internal/database"
@@ -60,29 +59,9 @@ func (cfg *apiConfig) handlerCreateUser(w http.ResponseWriter, r *http.Request) 
 }
 
 func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
-	token, err := auth.ValidateJWT(cfg.jwtSecret, r.Header)
+	userID, err := auth.ParseForUserID(cfg.jwtSecret, r.Header)
 	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "could not validate JWT")
-		return
-	}
-	issuer, err := token.Claims.GetIssuer()
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "could not find issuer in JWT")
-		return
-	}
-	if issuer != string(auth.TokenTypeAccess) {
-		respondWithError(w, http.StatusUnauthorized, "incorrect issuer for JWT")
-		return
-	}
-
-	userIDStr, err := token.Claims.GetSubject()
-	if err != nil {
-		respondWithError(w, http.StatusUnauthorized, "could not find subject in JWT")
-		return
-	}
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "could not parse userID")
+		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 

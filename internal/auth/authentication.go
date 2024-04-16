@@ -97,6 +97,30 @@ func ValidateJWT(jwtSecret string, header http.Header) (*jwt.Token, error) {
 	return token, nil
 }
 
+func ParseForUserID(jwtSecret string, header http.Header) (int, error) {
+	token, err := ValidateJWT(jwtSecret, header)
+	if err != nil {
+		return 0, errors.New("could not validate JWT")
+	}
+	issuer, err := token.Claims.GetIssuer()
+	if err != nil {
+		return 0, errors.New("could not find issuer in JWT")
+	}
+	if issuer != string(TokenTypeAccess) {
+		return 0, errors.New("incorrect issuer for JWT")
+	}
+
+	userIDStr, err := token.Claims.GetSubject()
+	if err != nil {
+		return 0, errors.New("could not find subject in JWT")
+	}
+	userID, err := strconv.Atoi(userIDStr)
+	if err != nil {
+		return 0, errors.New("could not parse userID")
+	}
+	return userID, nil
+}
+
 func GetBearerToken(header http.Header) (string, error) {
 	auth := header.Get("Authorization")
 	if auth == "" {
