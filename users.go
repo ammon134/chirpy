@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/ammon134/chirpy/internal/auth"
 	"github.com/ammon134/chirpy/internal/database"
@@ -83,12 +84,12 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "invalid password")
 		return
 	}
-	accessToken, err := auth.CreateAccessJWT(cfg.jwtSecret, user.ID)
+	accessToken, err := auth.CreateJWT(cfg.jwtSecret, user.ID, time.Hour, auth.TokenTypeAccess)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "could not create JWT")
 		return
 	}
-	refreshToken, err := auth.CreateRefreshJWT(cfg.jwtSecret, user.ID)
+	refreshToken, err := auth.CreateJWT(cfg.jwtSecret, user.ID, time.Hour*1440, auth.TokenTypeRefresh)
 	if err != nil {
 		respondWithError(w, http.StatusNotFound, "could not create JWT")
 		return
@@ -111,7 +112,7 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) {
-	token, err := auth.ValidateJWT(cfg.jwtSecret, r)
+	token, err := auth.ValidateJWT(cfg.jwtSecret, r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "could not validate JWT")
 		return
@@ -121,7 +122,7 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusUnauthorized, "could not find issuer in JWT")
 		return
 	}
-	if issuer != "chirpy-access" {
+	if issuer != string(auth.TokenTypeAccess) {
 		respondWithError(w, http.StatusUnauthorized, "incorrect issuer for JWT")
 		return
 	}

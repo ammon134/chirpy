@@ -11,6 +11,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type TokenType string
+
+const (
+	TokenTypeAccess  TokenType = "chirpy-access"
+	TokenTypeRefresh TokenType = "chirpy-refresh"
+)
+
 func HashPassword(password string) ([]byte, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -23,12 +30,12 @@ func CheckPasswordHash(hashedPassword []byte, password string) error {
 	return bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 }
 
-func CreateAccessJWT(jwtSecret string, userID int) (string, error) {
+func CreateJWT(jwtSecret string, userID int, duration time.Duration, tt TokenType) (string, error) {
 	currentTime := time.Now().UTC()
 	claims := jwt.RegisteredClaims{
 		IssuedAt:  jwt.NewNumericDate(currentTime),
-		ExpiresAt: jwt.NewNumericDate(currentTime.Add(time.Duration(1) * time.Hour)),
-		Issuer:    "chirpy-access",
+		ExpiresAt: jwt.NewNumericDate(currentTime.Add(duration)),
+		Issuer:    string(tt),
 		Subject:   strconv.Itoa(userID),
 	}
 
@@ -40,13 +47,6 @@ func CreateAccessJWT(jwtSecret string, userID int) (string, error) {
 	return ss, nil
 }
 
-func CreateRefreshJWT(jwtSecret string, userID int) (string, error) {
-	currentTime := time.Now().UTC()
-	claims := jwt.RegisteredClaims{
-		IssuedAt:  jwt.NewNumericDate(currentTime),
-		ExpiresAt: jwt.NewNumericDate(currentTime.Add(time.Duration(1440) * time.Hour)),
-		Issuer:    "chirpy-refresh",
-		Subject:   strconv.Itoa(userID),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -65,10 +65,15 @@ func ValidateJWT(jwtSecret string, r *http.Request) (*jwt.Token, error) {
 	bearerStr, tokenStr, found := strings.Cut(auth, " ")
 	if !found || bearerStr != "Bearer" {
 		return nil, errors.New("malformed authorization header")
+
+func ValidateJWT(jwtSecret string, header http.Header) (*jwt.Token, error) {
+	bearerToken, err := GetBearerToken(header)
+	if err != nil {
+		return nil, err
 	}
 
 	token, err := jwt.ParseWithClaims(
-		tokenStr,
+		bearerToken,
 		&jwt.RegisteredClaims{},
 		func(t *jwt.Token) (interface{}, error) { return []byte(jwtSecret), nil },
 	)
@@ -76,4 +81,16 @@ func ValidateJWT(jwtSecret string, r *http.Request) (*jwt.Token, error) {
 		return nil, errors.New("token is invalid or has expired")
 	}
 	return token, nil
+}
+
+func GetBearerToken(header http.Header) (string, error) {
+	auth := header.Get("Authorization")
+	if auth == "" {
+		return "", errors.New("no authorization token found")
+	}
+	bearerStr, tokenStr, found := strings.Cut(auth, " ")
+	if !found || bearerStr != "Bearer" {
+		return "", errors.New("malformed authorization header")
+	}
+	return tokenStr, nil
 }
