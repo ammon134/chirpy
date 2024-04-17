@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -47,11 +48,19 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.db.GetChirps()
+	authorIDStr := r.URL.Query().Get("author_id")
+	authorID, err := strconv.Atoi(authorIDStr)
+	if err != nil {
+		authorID = -1
+	}
+
+	chirps, err := cfg.db.GetChirpsByAuthor(authorID)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	sort.Slice(chirps, func(i, j int) bool { return chirps[i].ID < chirps[j].ID })
 
 	respondWithJSON(w, http.StatusOK, chirps)
 }
