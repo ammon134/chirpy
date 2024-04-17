@@ -18,9 +18,10 @@ const (
 )
 
 type apiConfig struct {
-	db         *database.DB
-	jwtSecret  string
-	serverHits int
+	db           *database.DB
+	jwtSecret    string
+	polka_apikey string
+	serverHits   int
 }
 
 func main() {
@@ -42,9 +43,10 @@ func main() {
 		log.Fatal(err)
 	}
 	apiConfig := &apiConfig{
-		db:         db,
-		jwtSecret:  os.Getenv("JWT_SECRET"),
-		serverHits: 0,
+		db:           db,
+		jwtSecret:    os.Getenv("JWT_SECRET"),
+		polka_apikey: os.Getenv("POLKA_APIKEY"),
+		serverHits:   0,
 	}
 
 	mux.Handle("/app/*", apiConfig.middlewareHitInc(http.StripPrefix("/app/", http.FileServer(http.Dir(filePathRoot)))))
@@ -69,6 +71,8 @@ func main() {
 
 	mux.HandleFunc("POST /api/revoke", apiConfig.handlerRevokeToken)
 	mux.HandleFunc("POST /api/refresh", apiConfig.handlerRefreshToken)
+
+	mux.HandleFunc("POST /api/polka/webhooks", apiConfig.handlerWebhookUpgradeUser)
 
 	fmt.Printf("listening on port %s...\n", port)
 	log.Fatal(server.ListenAndServe())

@@ -11,11 +11,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type TokenType string
+type (
+	TokenType string
+	AuthType  string
+)
 
 const (
 	TokenTypeAccess  TokenType = "chirpy-access"
 	TokenTypeRefresh TokenType = "chirpy-refresh"
+	AuthTypeBearer   AuthType  = "Bearer"
+	AuthTypeAPIKey   AuthType  = "ApiKey"
 )
 
 func HashPassword(password string) ([]byte, error) {
@@ -81,7 +86,7 @@ func RefreshJWT(jwtSecret, tokenStr string) (string, error) {
 }
 
 func ValidateJWT(jwtSecret string, header http.Header) (*jwt.Token, error) {
-	bearerToken, err := GetBearerToken(header)
+	bearerToken, err := GetBearerToken(header, AuthTypeBearer)
 	if err != nil {
 		return nil, err
 	}
@@ -121,13 +126,13 @@ func ParseForUserID(jwtSecret string, header http.Header) (int, error) {
 	return userID, nil
 }
 
-func GetBearerToken(header http.Header) (string, error) {
+func GetBearerToken(header http.Header, authType AuthType) (string, error) {
 	auth := header.Get("Authorization")
 	if auth == "" {
 		return "", errors.New("no authorization token found")
 	}
-	bearerStr, tokenStr, found := strings.Cut(auth, " ")
-	if !found || bearerStr != "Bearer" {
+	authStr, tokenStr, found := strings.Cut(auth, " ")
+	if !found || authStr != string(authType) {
 		return "", errors.New("malformed authorization header")
 	}
 	return tokenStr, nil

@@ -7,7 +7,7 @@ import (
 )
 
 func (cfg *apiConfig) handlerRevokeToken(w http.ResponseWriter, r *http.Request) {
-	bearerToken, err := auth.GetBearerToken(r.Header)
+	bearerToken, err := auth.GetBearerToken(r.Header, auth.AuthTypeBearer)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "could not find JWT token")
 		return
@@ -23,7 +23,7 @@ func (cfg *apiConfig) handlerRevokeToken(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *apiConfig) handlerRefreshToken(w http.ResponseWriter, r *http.Request) {
-	bearerToken, err := auth.GetBearerToken(r.Header)
+	bearerToken, err := auth.GetBearerToken(r.Header, auth.AuthTypeBearer)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "could not find JWT token")
 		return

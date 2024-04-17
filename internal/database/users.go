@@ -10,6 +10,7 @@ type UserTable struct {
 type User struct {
 	Email          string `json:"email"`
 	HashedPassword []byte `json:"hashed_password"`
+	IsChirpyRed    bool   `json:"is_chirpy_red"`
 	ID             int    `json:"id"`
 }
 
@@ -24,6 +25,7 @@ func (db *DB) CreateUser(email string, hash []byte) (User, error) {
 	user := User{
 		ID:             dbs.UserTable.NextIndex,
 		Email:          email,
+		IsChirpyRed:    false,
 		HashedPassword: hash,
 	}
 	_, err = db.GetUserByEmail(user.Email)
@@ -89,4 +91,27 @@ func (db *DB) UpdateUser(id int, email string, hashedPassword []byte) (User, err
 	}
 
 	return user, nil
+}
+
+func (db *DB) UpgradeUser(id int) error {
+	dbs, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+
+	user, err := db.GetUserByID(id)
+	if err != nil {
+		return err
+	}
+
+	user.IsChirpyRed = true
+
+	dbs.UserTable.Users[id] = user
+
+	err = db.writeDB(dbs)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
