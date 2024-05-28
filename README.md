@@ -2,4 +2,4 @@
 
 ## Description
 
-Twitter clone
+Basic Go server with CRUD
